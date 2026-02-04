@@ -3,7 +3,7 @@ defmodule Azurex.Blob.SharedAccessSignatureTest do
   import Azurex.Blob.SharedAccessSignature
 
   setup do
-    Application.put_env(:azurex, Azurex.Blob.Config,
+    Application.put_env(:blobex, Azurex.Blob.Config,
       storage_account_name: "storage_account",
       storage_account_key: Base.encode64("secretkey")
     )
@@ -42,11 +42,11 @@ defmodule Azurex.Blob.SharedAccessSignatureTest do
 
   test "wihout overrides, operates on default container" do
     env =
-      Application.get_env(:azurex, Azurex.Blob.Config)
+      Application.get_env(:blobex, Azurex.Blob.Config)
       |> Keyword.put(:default_container, container())
 
     # Reapply environment but with default container
-    Application.put_env(:azurex, Azurex.Blob.Config, env)
+    Application.put_env(:blobex, Azurex.Blob.Config, env)
 
     assert sas_url([], "/", from: now()) == sas_url(container(), "/", from: now())
   end
@@ -56,9 +56,9 @@ defmodule Azurex.Blob.SharedAccessSignatureTest do
   defp now, do: ~U[2022-10-10 10:10:00Z]
 
   defp delete_env do
-    env = Application.get_env(:azurex, Azurex.Blob.Config)
+    env = Application.get_env(:blobex, Azurex.Blob.Config)
     container = env[:default_container]
-    Application.put_env(:azurex, Azurex.Blob.Config, [])
+    Application.put_env(:blobex, Azurex.Blob.Config, [])
 
     env
     |> Keyword.put(:container, container)

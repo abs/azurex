@@ -3,16 +3,16 @@ defmodule Azurex.MixProject do
 
   def project do
     [
-      app: :azurex,
-      version: "1.2.0",
+      app: :blobex,
+      version: "2.0.1",
       elixir: "~> 1.12",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       description: description(),
       package: package(),
       deps: deps(),
-      name: "AzureX",
-      source_url: "https://github.com/eyrmedical/azurex"
+      name: "Blobex",
+      source_url: "https://github.com/abs/azurex"
     ]
   end
 
@@ -44,7 +44,7 @@ defmodule Azurex.MixProject do
   defp package do
     [
       licenses: ["Apache-2.0", "MIT"],
-      links: %{"GitHub" => "https://github.com/eyrmedical/azurex"}
+      links: %{"GitHub" => "https://github.com/abs/azurex"}
     ]
   end
 end

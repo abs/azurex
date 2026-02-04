@@ -4,7 +4,7 @@ defmodule Azurex.Blob.Config do
   """
   @type config_overrides :: String.t() | keyword
 
-  defp conf, do: Application.get_env(:azurex, __MODULE__, [])
+  defp conf, do: Application.get_env(:blobex, __MODULE__, [])
 
   @doc """
   Azure endpoint url, optional

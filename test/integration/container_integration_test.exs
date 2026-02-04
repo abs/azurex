@@ -61,9 +61,9 @@ defmodule Azurex.ContainerIntegrationTests do
   end
 
   defp delete_env do
-    env = Application.get_env(:azurex, Azurex.Blob.Config)
+    env = Application.get_env(:blobex, Azurex.Blob.Config)
     container = env[:default_container]
-    Application.put_env(:azurex, Azurex.Blob.Config, [])
+    Application.put_env(:blobex, Azurex.Blob.Config, [])
 
     env
     |> Keyword.put(:container, container)

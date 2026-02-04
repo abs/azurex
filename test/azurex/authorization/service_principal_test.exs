@@ -9,7 +9,7 @@ defmodule Azurex.Authorization.ServicePrincipalTest do
   setup do
     bypass = Bypass.open()
 
-    Application.put_env(:azurex, Azurex.Blob.Config, auth_url: "http://localhost:#{bypass.port}")
+    Application.put_env(:blobex, Azurex.Blob.Config, auth_url: "http://localhost:#{bypass.port}")
 
     {:ok, bypass: bypass}
   end

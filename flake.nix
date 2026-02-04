@@ -1,5 +1,5 @@
 {
-  description = "Azurex development environment";
+  description = "Blobex development environment";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

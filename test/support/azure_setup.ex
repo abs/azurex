@@ -9,7 +9,7 @@ defmodule AzureSetup do
   @test_blob_name "test_blob"
 
   def set_env do
-    Application.put_env(:azurex, Azurex.Blob.Config,
+    Application.put_env(:blobex, Azurex.Blob.Config,
       storage_account_name: System.get_env("STORAGE_ACCOUNT_NAME"),
       default_container: @default_container,
       storage_client_id: System.get_env("STORAGE_CLIENT_ID"),

@@ -10,7 +10,7 @@ defmodule AzuriteSetup do
   @test_blob_name "test_blob"
 
   def set_env do
-    Application.put_env(:azurex, Azurex.Blob.Config,
+    Application.put_env(:blobex, Azurex.Blob.Config,
       default_container: @default_container,
       storage_account_connection_string: @connection_string
     )

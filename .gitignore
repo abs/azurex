@@ -25,5 +25,6 @@ azurex-*.tar
 .vscode
 /config/config.exs
 .azurite
+.direnv
 .nix-mix
 .nix-hex

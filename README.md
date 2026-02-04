@@ -1,7 +1,10 @@
-[![Elixir CI](https://github.com/jakobht/azurex/actions/workflows/elixir.yml/badge.svg)](https://github.com/jakobht/azurex/actions/workflows/elixir.yml)
-[![Hex.pm](https://img.shields.io/hexpm/v/azurex)](https://hex.pm/packages/azurex)
+[![Hex.pm](https://img.shields.io/hexpm/v/blobex)](https://hex.pm/packages/blobex)
 
 # Azurex
+
+> **Note:** This package is republished on Hex as [`blobex`](https://hex.pm/packages/blobex).
+> It is a maintained fork of [`azurex`](https://hex.pm/packages/azurex) with additional features
+> including Req-based HTTP client and service principal authentication.
 
 Implementation of the Azure Blob Storage [Rest API](https://docs.microsoft.com/en-us/rest/api/storageservices/blob-service-rest-api) for Elixir.
 
@@ -19,13 +22,13 @@ Currently supports:
 
 ## Installation
 
-[Available in Hex](https://hex.pm/packages/azurex), the package can be installed
-by adding `azurex` to your list of dependencies in `mix.exs` e.g.:
+[Available in Hex](https://hex.pm/packages/blobex), the package can be installed
+by adding `blobex` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:azurex, "~> 1.1.0"}
+    {:blobex, "~> 2.0"}
   ]
 end
 ```
@@ -36,7 +39,7 @@ For authentication, there is support for using both an account key or service pr
 For configuration of the account key, use _either_ `storage_account_name` and `storage_account_key` _or_ `storage_account_connection_string`.
 
 ```elixir
-config :azurex, Azurex.Blob.Config,
+config :blobex, Azurex.Blob.Config,
   api_url: "https://sample.blob.core.windows.net", # Optional
   default_container: "defaultcontainer", # Optional
   storage_account_name: "sample",
@@ -47,7 +50,7 @@ config :azurex, Azurex.Blob.Config,
 For configuration of service principal, use `storage_client_id`, `storage_client_secret`, `storage_tenant_id`.
 
 ```elixir
-config :azurex, Azurex.Blob.Config,
+config :blobex, Azurex.Blob.Config,
   api_url: "https://sample.blob.core.windows.net", # Optional
   default_container: "defaultcontainer", # Optional
   storage_account_name: "sample",
@@ -74,7 +77,7 @@ Azurex.Blob.put_blob("file.txt", "contents", "text/plain", [
 
 ## Documentation
 
-Documentation can be found at [https://hexdocs.pm/azurex](https://hexdocs.pm/azurex). Or generated using [ExDoc](https://github.com/elixir-lang/ex_doc)
+Documentation can be found at [https://hexdocs.pm/blobex](https://hexdocs.pm/blobex). Or generated using [ExDoc](https://github.com/elixir-lang/ex_doc)
 
 ## Development
 
