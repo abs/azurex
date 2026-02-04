@@ -5,7 +5,7 @@ defmodule Azurex.Blob do
   In the functions below set container as nil to use the one configured in `Azurex.Blob.Config`.
   """
 
-  alias Azurex.Authorization.SharedKey
+  alias Azurex.Authorization.Auth
   alias Azurex.Blob.{Block, Config}
 
   @typep optional_string :: String.t() | nil
@@ -20,10 +20,7 @@ defmodule Azurex.Blob do
       url: Config.api_url(connection_params) <> "/",
       params: [comp: "list"]
     )
-    |> SharedKey.sign(
-      storage_account_name: Config.storage_account_name(connection_params),
-      storage_account_key: Config.storage_account_key(connection_params)
-    )
+    |> Auth.authorize_request(connection_params)
     |> Req.request()
     |> case do
       {:ok, %{status: 200, body: xml}} -> {:ok, xml}
@@ -122,11 +119,7 @@ defmodule Azurex.Blob do
       # Blob storage only answers when the whole file has been uploaded
       receive_timeout: :infinity
     )
-    |> SharedKey.sign(
-      storage_account_name: Config.storage_account_name(connection_params),
-      storage_account_key: Config.storage_account_key(connection_params),
-      content_type: content_type
-    )
+    |> Auth.authorize_request(connection_params, content_type)
     |> Req.request()
     |> case do
       {:ok, %{status: 201}} -> :ok
@@ -212,11 +205,7 @@ defmodule Azurex.Blob do
         {"content-type", content_type}
       ]
     )
-    |> SharedKey.sign(
-      storage_account_name: Config.storage_account_name(connection_params),
-      storage_account_key: Config.storage_account_key(connection_params),
-      content_type: content_type
-    )
+    |> Auth.authorize_request(connection_params, content_type)
     |> Req.request()
     |> case do
       {:ok, %{status: 202} = resp} -> {:ok, resp}
@@ -247,10 +236,7 @@ defmodule Azurex.Blob do
       params: params,
       decode_body: false
     )
-    |> SharedKey.sign(
-      storage_account_name: Config.storage_account_name(connection_params),
-      storage_account_key: Config.storage_account_key(connection_params)
-    )
+    |> Auth.authorize_request(connection_params)
   end
 
   @doc """
@@ -281,10 +267,7 @@ defmodule Azurex.Blob do
           restype: "container"
         ] ++ params
     )
-    |> SharedKey.sign(
-      storage_account_name: Config.storage_account_name(connection_params),
-      storage_account_key: Config.storage_account_key(connection_params)
-    )
+    |> Auth.authorize_request(connection_params)
     |> Req.request()
     |> case do
       {:ok, %{status: 200, body: xml}} -> {:ok, xml}
