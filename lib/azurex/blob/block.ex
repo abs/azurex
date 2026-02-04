@@ -25,7 +25,7 @@ defmodule Azurex.Blob.Block do
     params = [{:comp, "block"}, {:blockid, block_id} | params]
     connection_params = Config.get_connection_params(overrides)
 
-    %HTTPoison.Request{
+    Req.new(
       method: :put,
       url: Blob.get_url(name, connection_params),
       params: params,
@@ -34,17 +34,17 @@ defmodule Azurex.Blob.Block do
         {"content-type", content_type},
         {"content-length", byte_size(chunk)}
       ]
-    }
+    )
     |> SharedKey.sign(
       storage_account_name: Config.storage_account_name(connection_params),
       storage_account_key: Config.storage_account_key(connection_params),
       content_type: content_type
     )
-    |> HTTPoison.request()
+    |> Req.request()
     |> case do
-      {:ok, %HTTPoison.Response{status_code: 201}} -> {:ok, block_id}
-      {:ok, err} -> {:error, err}
-      {:error, err} -> {:error, err}
+      {:ok, %{status: 201}} -> {:ok, block_id}
+      {:ok, response} -> {:error, response}
+      {:error, exception} -> {:error, exception}
     end
   end
 
@@ -64,8 +64,7 @@ defmodule Azurex.Blob.Block do
     blocks =
       block_ids
       |> Enum.reverse()
-      |> Enum.map(fn block_id -> "<Uncommitted>#{block_id}</Uncommitted>" end)
-      |> Enum.join()
+      |> Enum.map_join("", fn block_id -> "<Uncommitted>#{block_id}</Uncommitted>" end)
 
     body = """
     <?xml version="1.0" encoding="utf-8"?>
@@ -74,7 +73,7 @@ defmodule Azurex.Blob.Block do
     </BlockList>
     """
 
-    %HTTPoison.Request{
+    Req.new(
       method: :put,
       url: Blob.get_url(name, connection_params),
       params: params,
@@ -83,17 +82,17 @@ defmodule Azurex.Blob.Block do
         {"content-type", content_type},
         {"x-ms-blob-content-type", blob_content_type}
       ]
-    }
+    )
     |> SharedKey.sign(
       storage_account_name: Config.storage_account_name(connection_params),
       storage_account_key: Config.storage_account_key(connection_params),
       content_type: content_type
     )
-    |> HTTPoison.request()
+    |> Req.request()
     |> case do
-      {:ok, %HTTPoison.Response{status_code: 201}} -> :ok
-      {:ok, err} -> {:error, err}
-      {:error, err} -> {:error, err}
+      {:ok, %{status: 201}} -> :ok
+      {:ok, response} -> {:error, response}
+      {:error, exception} -> {:error, exception}
     end
   end
 

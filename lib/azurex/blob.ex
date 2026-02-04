@@ -5,28 +5,30 @@ defmodule Azurex.Blob do
   In the functions below set container as nil to use the one configured in `Azurex.Blob.Config`.
   """
 
-  alias Azurex.Blob.{Block, Config}
   alias Azurex.Authorization.SharedKey
+  alias Azurex.Blob.{Block, Config}
 
   @typep optional_string :: String.t() | nil
 
   @spec list_containers(Config.config_overrides()) ::
           {:ok, String.t()}
-          | {:error, HTTPoison.AsyncResponse.t() | HTTPoison.Error.t() | HTTPoison.Response.t()}
+          | {:error, term()}
   def list_containers(overrides \\ []) do
-    %HTTPoison.Request{
-      url: Config.api_url(overrides) <> "/",
+    connection_params = Config.get_connection_params(overrides)
+
+    Req.new(
+      url: Config.api_url(connection_params) <> "/",
       params: [comp: "list"]
-    }
-    |> SharedKey.sign(
-      storage_account_name: Config.storage_account_name(overrides),
-      storage_account_key: Config.storage_account_key(overrides)
     )
-    |> HTTPoison.request()
+    |> SharedKey.sign(
+      storage_account_name: Config.storage_account_name(connection_params),
+      storage_account_key: Config.storage_account_key(connection_params)
+    )
+    |> Req.request()
     |> case do
-      {:ok, %{body: xml, status_code: 200}} -> {:ok, xml}
-      {:ok, err} -> {:error, err}
-      {:error, err} -> {:error, err}
+      {:ok, %{status: 200, body: xml}} -> {:ok, xml}
+      {:ok, response} -> {:error, response}
+      {:error, exception} -> {:error, exception}
     end
   end
 
@@ -71,7 +73,7 @@ defmodule Azurex.Blob do
       :ok
 
       iex> put_blob("filename.txt", "file contents", "text/plain")
-      {:error, %HTTPoison.Response{}}
+      {:error, %Req.Response{}}
 
   """
   @spec put_blob(
@@ -82,7 +84,7 @@ defmodule Azurex.Blob do
           keyword
         ) ::
           :ok
-          | {:error, HTTPoison.AsyncResponse.t() | HTTPoison.Error.t() | HTTPoison.Response.t()}
+          | {:error, term()}
   def put_blob(name, blob, content_type, overrides \\ [], params \\ [])
 
   def put_blob(name, {:stream, bitstream}, content_type, overrides, params) do
@@ -90,14 +92,16 @@ defmodule Azurex.Blob do
 
     bitstream
     |> Stream.transform(
-      fn -> [] end,
-      fn chunk, acc ->
-        with {:ok, block_id} <- Block.put_block(overrides, chunk, name, params) do
-          {[], [block_id | acc]}
+      fn -> {:ok, []} end,
+      fn chunk, {:ok, acc} ->
+        case Block.put_block(overrides, chunk, name, params) do
+          {:ok, block_id} -> {[], {:ok, [block_id | acc]}}
+          {:error, error} -> {[], {:error, error}}
         end
       end,
-      fn acc ->
-        Block.put_block_list(acc, overrides, name, content_type, params)
+      fn
+        {:ok, block_ids} -> Block.put_block_list(block_ids, overrides, name, content_type, params)
+        {:error, _error} -> :ok
       end
     )
     |> Stream.run()
@@ -107,7 +111,7 @@ defmodule Azurex.Blob do
     content_type = content_type || "application/octet-stream"
     connection_params = Config.get_connection_params(overrides)
 
-    %HTTPoison.Request{
+    Req.new(
       method: :put,
       url: get_url(name, connection_params),
       params: params,
@@ -115,20 +119,19 @@ defmodule Azurex.Blob do
       headers: [
         {"x-ms-blob-type", "BlockBlob"}
       ],
-      # Blob storage only answers when the whole file has been uploaded, so recv_timeout
-      # is not applicable for the put request, so we set it to infinity
-      options: [recv_timeout: :infinity]
-    }
+      # Blob storage only answers when the whole file has been uploaded
+      receive_timeout: :infinity
+    )
     |> SharedKey.sign(
       storage_account_name: Config.storage_account_name(connection_params),
       storage_account_key: Config.storage_account_key(connection_params),
       content_type: content_type
     )
-    |> HTTPoison.request()
+    |> Req.request()
     |> case do
-      {:ok, %{status_code: 201}} -> :ok
-      {:ok, err} -> {:error, err}
-      {:error, err} -> {:error, err}
+      {:ok, %{status: 201}} -> :ok
+      {:ok, response} -> {:error, response}
+      {:error, exception} -> {:error, exception}
     end
   end
 
@@ -153,19 +156,19 @@ defmodule Azurex.Blob do
       {:ok, "file contents"}
 
       iex> get_blob("filename.txt")
-      {:error, %HTTPoison.Response{}}
+      {:error, %Req.Response{}}
 
   """
   @spec get_blob(String.t(), Config.config_overrides(), keyword) ::
           {:ok, binary()}
-          | {:error, HTTPoison.AsyncResponse.t() | HTTPoison.Error.t() | HTTPoison.Response.t()}
+          | {:error, term()}
   def get_blob(name, overrides \\ [], params \\ []) do
     blob_request(name, overrides, :get, params)
-    |> HTTPoison.request()
+    |> Req.request()
     |> case do
-      {:ok, %{body: blob, status_code: 200}} -> {:ok, blob}
-      {:ok, err} -> {:error, err}
-      {:error, err} -> {:error, err}
+      {:ok, %{status: 200, body: blob}} -> {:ok, blob}
+      {:ok, response} -> {:error, response}
+      {:error, exception} -> {:error, exception}
     end
   end
 
@@ -174,15 +177,15 @@ defmodule Azurex.Blob do
   """
   @spec head_blob(String.t(), Config.config_overrides(), keyword) ::
           {:ok, list}
-          | {:error, :not_found | HTTPoison.Error.t() | HTTPoison.Response.t()}
+          | {:error, :not_found | term()}
   def head_blob(name, overrides \\ [], params \\ []) do
     blob_request(name, overrides, :head, params)
-    |> HTTPoison.request()
+    |> Req.request()
     |> case do
-      {:ok, %HTTPoison.Response{status_code: 200, headers: details}} -> {:ok, details}
-      {:ok, %HTTPoison.Response{status_code: 404}} -> {:error, :not_found}
-      {:ok, err} -> {:error, err}
-      {:error, err} -> {:error, err}
+      {:ok, %{status: 200, headers: headers}} -> {:ok, headers}
+      {:ok, %{status: 404}} -> {:error, :not_found}
+      {:ok, response} -> {:error, response}
+      {:error, exception} -> {:error, exception}
     end
   end
 
@@ -191,56 +194,59 @@ defmodule Azurex.Blob do
 
   The same configuration options (connection string, container, ...) are applied to both source and destination.
 
-  Note: Azure’s ‘[Copy Blob from URL](https://learn.microsoft.com/en-us/rest/api/storageservices/copy-blob-from-url)’
+  Note: Azure's '[Copy Blob from URL](https://learn.microsoft.com/en-us/rest/api/storageservices/copy-blob-from-url)'
   operation has a maximum size of 256 MiB.
   """
   @spec copy_blob(String.t(), String.t(), Config.config_overrides()) ::
-          {:ok, HTTPoison.Response.t()} | {:error, term()}
+          {:ok, term()} | {:error, term()}
   def copy_blob(source_name, destination_name, overrides \\ []) do
     content_type = "application/octet-stream"
     connection_params = Config.get_connection_params(overrides)
     source_url = get_url(source_name, connection_params)
-    headers = [{"x-ms-copy-source", source_url}, {"content-type", content_type}]
 
-    %HTTPoison.Request{
+    Req.new(
       method: :put,
       url: get_url(destination_name, connection_params),
-      headers: headers
-    }
+      headers: [
+        {"x-ms-copy-source", source_url},
+        {"content-type", content_type}
+      ]
+    )
     |> SharedKey.sign(
       storage_account_name: Config.storage_account_name(connection_params),
       storage_account_key: Config.storage_account_key(connection_params),
       content_type: content_type
     )
-    |> HTTPoison.request()
+    |> Req.request()
     |> case do
-      {:ok, %HTTPoison.Response{status_code: 202} = resp} -> {:ok, resp}
-      {:ok, %HTTPoison.Response{} = resp} -> {:error, resp}
-      err -> err
+      {:ok, %{status: 202} = resp} -> {:ok, resp}
+      {:ok, response} -> {:error, response}
+      {:error, exception} -> {:error, exception}
     end
   end
 
   @spec delete_blob(String.t(), Config.config_overrides(), keyword) ::
-          :ok | {:error, :not_found | HTTPoison.Error.t() | HTTPoison.Response.t()}
+          :ok | {:error, :not_found | term()}
   def delete_blob(name, overrides \\ [], params \\ []) do
     blob_request(name, overrides, :delete, params)
-    |> HTTPoison.request()
+    |> Req.request()
     |> case do
-      {:ok, %HTTPoison.Response{status_code: 202}} -> :ok
-      {:ok, %HTTPoison.Response{status_code: 404}} -> {:error, :not_found}
-      {:ok, err} -> {:error, err}
-      {:error, err} -> {:error, err}
+      {:ok, %{status: 202}} -> :ok
+      {:ok, %{status: 404}} -> {:error, :not_found}
+      {:ok, response} -> {:error, response}
+      {:error, exception} -> {:error, exception}
     end
   end
 
   defp blob_request(name, overrides, method, params) do
     connection_params = Config.get_connection_params(overrides)
 
-    %HTTPoison.Request{
+    Req.new(
       method: method,
       url: get_url(name, connection_params),
-      params: params
-    }
+      params: params,
+      decode_body: false
+    )
     |> SharedKey.sign(
       storage_account_name: Config.storage_account_name(connection_params),
       storage_account_key: Config.storage_account_key(connection_params)
@@ -259,31 +265,31 @@ defmodule Azurex.Blob do
       {:ok, "\uFEFF<?xml ...."}
 
       iex> Azurex.Blob.list_blobs()
-      {:error, %HTTPoison.Response{}}
+      {:error, %Req.Response{}}
   """
-  @spec list_blobs(Config.config_overrides()) ::
+  @spec list_blobs(Config.config_overrides(), keyword()) ::
           {:ok, binary()}
-          | {:error, HTTPoison.AsyncResponse.t() | HTTPoison.Error.t() | HTTPoison.Response.t()}
+          | {:error, term()}
   def list_blobs(overrides \\ [], params \\ []) do
     connection_params = Config.get_connection_params(overrides)
 
-    %HTTPoison.Request{
+    Req.new(
       url: get_url(connection_params),
       params:
         [
           comp: "list",
           restype: "container"
         ] ++ params
-    }
+    )
     |> SharedKey.sign(
       storage_account_name: Config.storage_account_name(connection_params),
       storage_account_key: Config.storage_account_key(connection_params)
     )
-    |> HTTPoison.request()
+    |> Req.request()
     |> case do
-      {:ok, %{body: xml, status_code: 200}} -> {:ok, xml}
-      {:ok, err} -> {:error, err}
-      {:error, err} -> {:error, err}
+      {:ok, %{status: 200, body: xml}} -> {:ok, xml}
+      {:ok, response} -> {:error, response}
+      {:error, exception} -> {:error, exception}
     end
   end
 
